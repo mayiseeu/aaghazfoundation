@@ -35,4 +35,4 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://elegantize-zl57.onrender.com/sitemap.xml
+Sitemap: https://elegantize.com/sitemap.xml
