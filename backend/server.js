@@ -41,26 +41,31 @@ app.use("/api/blogs", blogRoutes);
 // Database Connection and Sync
 sequelize
   .authenticate()
-  .then(() => {
+  .then(async () => {
     console.log("MySQL Database Connected...");
-    return sequelize.query(
-      "SELECT COLUMN_TYPE, COLUMN_DEFAULT, EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='BlogPosts' AND COLUMN_NAME='id' AND TABLE_SCHEMA=DATABASE()"
-    );
-  })
-  .then(([rows]) => {
-    console.log("Current id column:", JSON.stringify(rows[0]));
-    return sequelize.query(
+
+    // Fix id column type
+    await sequelize.query(
       "ALTER TABLE BlogPosts MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT"
-    ).catch((err) => console.log("ALTER warning:", err.message));
-  })
-  .then(() => sequelize.sync({ alter: true }))
-  .then(() => {
-    return sequelize.query(
-      "SELECT COLUMN_TYPE, EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='BlogPosts' AND COLUMN_NAME='id' AND TABLE_SCHEMA=DATABASE()"
-    );
-  })
-  .then(([rows]) => {
-    console.log("id column after sync:", JSON.stringify(rows[0]));
+    ).catch((err) => console.log("ALTER id warning:", err.message));
+
+    // Drop duplicate slug unique indexes (sync alter adds a new one every restart)
+    const [indexes] = await sequelize.query(
+      "SELECT DISTINCT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME='BlogPosts' AND TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='slug' AND INDEX_NAME != 'PRIMARY'"
+    ).catch(() => [[]]);
+    const indexNames = indexes.map((r) => r.INDEX_NAME);
+    // Keep one, drop the rest
+    for (let i = 1; i < indexNames.length; i++) {
+      await sequelize.query(
+        `ALTER TABLE \`BlogPosts\` DROP INDEX \`${indexNames[i]}\``
+      ).catch((err) => console.log(`DROP INDEX warning: ${err.message}`));
+    }
+    if (indexNames.length > 1) {
+      console.log(`Cleaned up ${indexNames.length - 1} duplicate slug indexes`);
+    }
+
+    // Use sync without alter to prevent duplicate index buildup
+    await sequelize.sync();
     console.log("Database Synced");
   })
   .catch((err) => console.log("Error: " + err));
