@@ -44,14 +44,17 @@ sequelize
   .then(async () => {
     console.log("MySQL Database Connected...");
 
-    // Fix id column type and log auto_increment counter
+    // Fix id column: upgrade to BIGINT (INT counter was overflowed by failed UUID inserts)
     await sequelize.query(
-      "ALTER TABLE BlogPosts MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT"
+      "ALTER TABLE BlogPosts MODIFY COLUMN id BIGINT NOT NULL AUTO_INCREMENT"
     ).catch((err) => console.log("ALTER id warning:", err.message));
-    const [[aiRow]] = await sequelize.query(
-      "SELECT AUTO_INCREMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='BlogPosts' AND TABLE_SCHEMA=DATABASE()"
-    ).catch(() => [[[]]]);
-    console.log("AUTO_INCREMENT counter:", aiRow?.AUTO_INCREMENT);
+    // Reset auto_increment to max(id)+1 in case counter is corrupted
+    await sequelize.query(
+      "SET @max_id = (SELECT COALESCE(MAX(id), 0) + 1 FROM BlogPosts); ALTER TABLE BlogPosts AUTO_INCREMENT = @max_id;"
+    ).catch(() => sequelize.query(
+      "ALTER TABLE BlogPosts AUTO_INCREMENT = 1"
+    ).catch((err) => console.log("AUTO_INCREMENT reset warning:", err.message)));
+    console.log("id column upgraded to BIGINT, AUTO_INCREMENT reset");
 
     // Drop ALL duplicate slug unique indexes (sync alter adds a new one every restart)
     const [indexes] = await sequelize.query(

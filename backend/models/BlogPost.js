@@ -4,6 +4,11 @@ const sequelize = require("../config/db");
 const BlogPost = sequelize.define(
   "BlogPost",
   {
+    id: {
+      type: DataTypes.BIGINT,
+      autoIncrement: true,
+      primaryKey: true,
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
