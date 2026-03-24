@@ -49,11 +49,12 @@ sequelize
       "ALTER TABLE BlogPosts MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT"
     ).catch((err) => console.log("ALTER id warning:", err.message));
 
-    // Drop duplicate slug unique indexes (sync alter adds a new one every restart)
+    // Drop ALL duplicate slug unique indexes (sync alter adds a new one every restart)
     const [indexes] = await sequelize.query(
       "SELECT DISTINCT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME='BlogPosts' AND TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='slug' AND INDEX_NAME != 'PRIMARY'"
     ).catch(() => [[]]);
     const indexNames = indexes.map((r) => r.INDEX_NAME);
+    console.log(`Found ${indexNames.length} slug indexes:`, indexNames);
     // Keep one, drop the rest
     for (let i = 1; i < indexNames.length; i++) {
       await sequelize.query(
@@ -63,6 +64,11 @@ sequelize
     if (indexNames.length > 1) {
       console.log(`Cleaned up ${indexNames.length - 1} duplicate slug indexes`);
     }
+
+    // Repair table to fix any metadata corruption from too-many-keys errors
+    await sequelize.query("REPAIR TABLE `BlogPosts`")
+      .then(([r]) => console.log("REPAIR TABLE:", r[0]?.Msg_text))
+      .catch((err) => console.log("REPAIR warning:", err.message));
 
     // Use sync without alter to prevent duplicate index buildup
     await sequelize.sync();
