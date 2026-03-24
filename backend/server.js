@@ -43,8 +43,12 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("MySQL Database Connected...");
-    return sequelize.sync({ alter: true }); // Automatically updates schema
+    // Ensure id column is INT AUTO_INCREMENT (sync alter can't always fix primary keys)
+    return sequelize.query(
+      "ALTER TABLE BlogPosts MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT"
+    ).catch(() => {}); // ignore if already correct or table doesn't exist yet
   })
+  .then(() => sequelize.sync({ alter: true }))
   .then(() => {
     console.log("Database Synced");
   })
