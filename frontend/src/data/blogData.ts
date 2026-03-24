@@ -17,15 +17,16 @@ export interface BlogPost {
  * e.g., /2026/01/21/ceiling-installation-wedding-nyc-2026
  */
 export const getBlogPostUrl = (slug: string, createdAt?: string): string => {
+  const cleanSlug = slug.replace(/^\/+/, "");
   if (createdAt) {
     const d = new Date(createdAt);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
-    return `/${year}/${month}/${day}/${slug}`;
+    return `/${year}/${month}/${day}/${cleanSlug}`;
   }
   // Fallback if no createdAt
-  return `/blog/${slug}`;
+  return `/blog/${cleanSlug}`;
 };
 
 export const blogPosts: BlogPost[] = [

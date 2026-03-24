@@ -69,7 +69,11 @@ const getBlogById = async (req, res) => {
 // @access  Public
 const getBlogBySlug = async (req, res) => {
   try {
-    const blog = await BlogPost.findOne({ where: { slug: req.params.slug.replace(/^\/+/, "") } });
+    const { Op } = require("sequelize");
+    const cleanSlug = req.params.slug.replace(/^\/+/, "");
+    const blog = await BlogPost.findOne({
+      where: { slug: { [Op.in]: [cleanSlug, `/${cleanSlug}`] } },
+    });
     if (blog) {
       res.json(blog);
     } else {
