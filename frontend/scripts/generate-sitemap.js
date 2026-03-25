@@ -64,7 +64,7 @@ async function generate() {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
-      const cleanSlug = post.slug.replace(/^\/+/, "");
+      const cleanSlug = post.slug.replace(/^\/+/, "").trim().toLowerCase();
       const lastmod = new Date(post.updatedAt).toISOString().split("T")[0];
       return `  <url>
     <loc>${BASE_URL}/${year}/${month}/${day}/${cleanSlug}</loc>
