@@ -68,42 +68,79 @@ app.get("/sitemap.xml", async (req, res) => {
 
     const BASE = "https://elegantize.com";
 
+    // XML-encode a string so special characters don't break the sitemap.
+    const xmlEncode = (str) =>
+      str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+
+    // Validate that a slug is safe to include in a URL.
+    // Rejects: empty, contains spaces, contains ":" (unresolved CMS variables),
+    // still has a date prefix (should have been cleaned by fixSlugs.js).
+    const isValidSlug = (slug) => {
+      if (!slug || slug.trim() === "") return false;
+      if (/\s/.test(slug)) return false;          // spaces → broken URL
+      if (/:/.test(slug)) return false;            // "slug: …" artifact
+      if (/^\d{4}-\d{2}-\d{2}-/.test(slug)) return false; // date prefix not yet cleaned
+      return true;
+    };
+
     const staticUrls = staticPages
       .map(
         (p) => `  <url>
-    <loc>${BASE}${p.loc}</loc>
+    <loc>${BASE}${xmlEncode(p.loc)}</loc>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`
       )
       .join("\n");
 
-    const blogUrls = posts
-      .map((post) => {
-        const d = new Date(post.createdAt);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        const cleanSlug = post.slug.replace(/^\/+/, "").trim().toLowerCase();
-        const lastmod = new Date(post.updatedAt).toISOString().split("T")[0];
-        return `  <url>
-    <loc>${BASE}/${year}/${month}/${day}/${cleanSlug}</loc>
+    const seenUrls = new Set();
+    const blogUrlEntries = [];
+
+    for (const post of posts) {
+      const rawSlug = post.slug.replace(/^\/+/, "").trim().toLowerCase();
+
+      if (!isValidSlug(rawSlug)) {
+        console.warn(`[sitemap] Skipping malformed slug: "${post.slug}"`);
+        continue;
+      }
+
+      const d = new Date(post.createdAt);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const lastmod = new Date(post.updatedAt).toISOString().split("T")[0];
+      const loc = `${BASE}/${year}/${month}/${day}/${xmlEncode(rawSlug)}`;
+
+      // Skip exact duplicate URLs (e.g. two posts with same date + slug)
+      if (seenUrls.has(loc)) {
+        console.warn(`[sitemap] Skipping duplicate URL: ${loc}`);
+        continue;
+      }
+      seenUrls.add(loc);
+
+      blogUrlEntries.push(`  <url>
+    <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-  </url>`;
-      })
-      .join("\n");
+  </url>`);
+    }
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticUrls}
-${blogUrls}
+${blogUrlEntries.join("\n")}
 </urlset>`;
 
     res.header("Content-Type", "application/xml");
     res.send(xml);
   } catch (err) {
+    console.error("[sitemap] Error generating sitemap:", err.message);
     res.status(500).send("Error generating sitemap");
   }
 });
