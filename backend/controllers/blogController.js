@@ -1,8 +1,36 @@
 const BlogPost = require("../models/BlogPost");
 
-// @desc    Get all blogs (with pagination)
-// @route   GET /api/blogs?page=1&limit=10
-// @access  Public
+// Trigger GitHub Actions sitemap workflow after blog changes
+async function triggerSitemapUpdate() {
+  try {
+    const token = process.env.GITHUB_PAT;
+    if (!token) return;
+    const res = await fetch(
+      "https://api.github.com/repos/ZiaOfficia/elegentize2603/actions/workflows/sitemap.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ref: "main" }),
+      }
+    );
+    if (res.ok) {
+      console.log("Sitemap update triggered successfully");
+    } else {
+      console.error("Sitemap trigger failed:", res.status, await res.text());
+    }
+  } catch (err) {
+    console.error("Failed to trigger sitemap update:", err.message);
+  }
+}
+
+// @desc Get all blogs (with pagination)
+// @route GET /api/blogs?page=1&limit=10
+// @access Public
 const getBlogs = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -10,7 +38,6 @@ const getBlogs = async (req, res) => {
     const offset = (page - 1) * limit;
     const search = req.query.search || "";
 
-    // Build where clause for search
     const whereClause = search
       ? {
           [require("sequelize").Op.or]: [
@@ -20,11 +47,9 @@ const getBlogs = async (req, res) => {
         }
       : {};
 
-    // Get total count for pagination
     const totalCount = await BlogPost.count({ where: whereClause });
     const totalPages = Math.ceil(totalCount / limit);
 
-    // Get paginated blogs
     const blogs = await BlogPost.findAll({
       where: whereClause,
       attributes: { exclude: ["content"] },
@@ -48,9 +73,9 @@ const getBlogs = async (req, res) => {
   }
 };
 
-// @desc    Get single blog by ID
-// @route   GET /api/blogs/id/:id
-// @access  Public
+// @desc Get single blog by ID
+// @route GET /api/blogs/id/:id
+// @access Public
 const getBlogById = async (req, res) => {
   try {
     const blog = await BlogPost.findByPk(req.params.id);
@@ -64,9 +89,9 @@ const getBlogById = async (req, res) => {
   }
 };
 
-// @desc    Get single blog by slug
-// @route   GET /api/blogs/:slug
-// @access  Public
+// @desc Get single blog by slug
+// @route GET /api/blogs/:slug
+// @access Public
 const getBlogBySlug = async (req, res) => {
   try {
     const { Op } = require("sequelize");
@@ -84,9 +109,9 @@ const getBlogBySlug = async (req, res) => {
   }
 };
 
-// @desc    Create a new blog
-// @route   POST /api/blogs
-// @access  Private
+// @desc Create a new blog
+// @route POST /api/blogs
+// @access Private
 const createBlog = async (req, res) => {
   try {
     const {
@@ -120,6 +145,9 @@ const createBlog = async (req, res) => {
     });
 
     res.status(201).json(blog);
+
+    // Trigger sitemap update in background (non-blocking)
+    triggerSitemapUpdate();
   } catch (error) {
     console.error("Blog create error:", error.name, error.message, error.fields, "errno:", error.original?.errno, "sqlState:", error.original?.sqlState);
     const isDuplicateSlug =
@@ -133,9 +161,9 @@ const createBlog = async (req, res) => {
   }
 };
 
-// @desc    Update a blog
-// @route   PUT /api/blogs/:id
-// @access  Private
+// @desc Update a blog
+// @route PUT /api/blogs/:id
+// @access Private
 const updateBlog = async (req, res) => {
   try {
     const blog = await BlogPost.findByPk(req.params.id);
@@ -145,6 +173,9 @@ const updateBlog = async (req, res) => {
       if (updateData.slug) updateData.slug = updateData.slug.replace(/^\/+/, "");
       await blog.update(updateData);
       res.json(blog);
+
+      // Trigger sitemap update in background (non-blocking)
+      triggerSitemapUpdate();
     } else {
       res.status(404).json({ message: "Blog not found" });
     }
@@ -153,9 +184,9 @@ const updateBlog = async (req, res) => {
   }
 };
 
-// @desc    Delete a blog
-// @route   DELETE /api/blogs/:id
-// @access  Private
+// @desc Delete a blog
+// @route DELETE /api/blogs/:id
+// @access Private
 const deleteBlog = async (req, res) => {
   try {
     const blog = await BlogPost.findByPk(req.params.id);
@@ -163,6 +194,9 @@ const deleteBlog = async (req, res) => {
     if (blog) {
       await blog.destroy();
       res.json({ message: "Blog removed" });
+
+      // Trigger sitemap update in background (non-blocking)
+      triggerSitemapUpdate();
     } else {
       res.status(404).json({ message: "Blog not found" });
     }
