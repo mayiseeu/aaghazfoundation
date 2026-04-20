@@ -166,7 +166,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="www.youtube.com/@elegantize"
+                  href="https://www.youtube.com/@elegantize"
                   className="hover:text-primary transition-colors flex items-center gap-2"
                 >
                   <Youtube size={16} /> Youtube

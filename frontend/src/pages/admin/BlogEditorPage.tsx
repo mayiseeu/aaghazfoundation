@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from "react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
-import BlotFormatter from "quill-blot-formatter";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/common/Button";
 import { API_BASE_URL } from "../../config";
-
-// Register BlotFormatter
-const Quill = (ReactQuill as any).Quill;
-if (Quill) {
-  Quill.register("modules/blotFormatter", BlotFormatter);
-}
 
 const BlogEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -311,7 +304,6 @@ const BlogEditorPage: React.FC = () => {
                 value={formData.content}
                 onChange={(content) => setFormData({ ...formData, content })}
                 modules={{
-                  blotFormatter: {},
                   toolbar: [
                     [{ header: [1, 2, 3, 4, 5, 6, false] }],
                     [{ font: [] }],

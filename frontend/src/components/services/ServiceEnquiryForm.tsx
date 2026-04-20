@@ -15,22 +15,15 @@ export const ServiceEnquiryForm = ({
   variant = "horizontal",
 }: ServiceEnquiryFormProps) => {
   const navigate = useNavigate();
-  const isDraping = serviceName === "Draping Services";
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     eventDate: "",
     message: "",
-    budget: "",
   });
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (isDraping && !formData.budget) {
-      alert("Please select a budget range.");
-      return;
-    }
 
     try {
       // Trigger background tasks (non-blocking)
@@ -40,7 +33,6 @@ export const ServiceEnquiryForm = ({
         phone: formData.phone,
         eventDate: formData.eventDate,
         message: formData.message,
-        ...(isDraping && { budget: formData.budget }),
         serviceName: serviceName || "Inquiry",
       });
 
@@ -51,7 +43,6 @@ export const ServiceEnquiryForm = ({
         eventDate: formData.eventDate,
         message: formData.message,
         serviceName: serviceName || "Inquiry",
-        ...(isDraping && { budget: formData.budget }),
       });
 
       // Redirect instantly
@@ -63,7 +54,6 @@ export const ServiceEnquiryForm = ({
         phone: "",
         eventDate: "",
         message: "",
-        budget: "",
       });
     } catch (error) {
       console.error("Submission error:", error);
@@ -71,21 +61,6 @@ export const ServiceEnquiryForm = ({
       navigate("/thank-you");
     }
   };
-
-  const budgetOptions = (
-    <select
-      required={isDraping}
-      value={formData.budget}
-      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-      className="w-full bg-stone-50 border-none px-4 py-3 focus:ring-1 focus:ring-primary text-gray-600 text-sm focus:outline-none appearance-none"
-    >
-      <option value="" disabled>Budget Range</option>
-      <option value="$2k">$2k</option>
-      <option value="$3k">$3k</option>
-      <option value="$4k">$4k</option>
-      <option value="$4k and above">$4k and above</option>
-    </select>
-  );
 
   // Horizontal Variant
   if (variant === "horizontal") {
@@ -162,8 +137,6 @@ export const ServiceEnquiryForm = ({
                 className="w-full bg-stone-50 border-none pl-10 pr-4 py-3 focus:ring-1 focus:ring-primary text-gray-600 text-sm focus:outline-none"
               />
             </div>
-
-            {isDraping && budgetOptions}
 
             <div className="relative">
               <input
@@ -254,28 +227,6 @@ export const ServiceEnquiryForm = ({
             className="w-full bg-stone-50 border border-gray-200 focus:outline-none focus:border-primary p-3 text-sm text-gray-900"
           />
         </div>
-
-        {isDraping && (
-          <div>
-            <label className="block text-[10px] uppercase tracking-widest font-bold mb-2 text-gray-500">
-              Budget Range
-            </label>
-            <select
-              required
-              value={formData.budget}
-              onChange={(e) =>
-                setFormData({ ...formData, budget: e.target.value })
-              }
-              className="w-full bg-stone-50 border border-gray-200 focus:outline-none focus:border-primary p-3 text-sm text-gray-900 appearance-none"
-            >
-              <option value="" disabled>Select a budget</option>
-              <option value="$2k">$2k</option>
-              <option value="$3k">$3k</option>
-              <option value="$4k">$4k</option>
-              <option value="$4k and above">$4k and above</option>
-            </select>
-          </div>
-        )}
 
         <div className="md:col-span-2">
           <label className="block text-[10px] uppercase tracking-widest font-bold mb-2 text-gray-500">

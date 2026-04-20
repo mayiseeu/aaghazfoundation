@@ -4,7 +4,54 @@ RewriteEngine On
 # Serve sitemap.xml via PHP proxy (transparent — no redirect, always up-to-date)
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
-# Handle React Router - serve index.html for all non-file routes
+# ── SEO: Block garbage URLs → 410 Gone ──────────────────────────────────────
+
+# YouTube-appended paths (e.g. /portfolio/www.youtube.com/@elegantize)
+RewriteCond %{REQUEST_URI} www\.youtube\.com [NC,OR]
+# Embedded absolute URLs in path (e.g. /2026/01/20/https:/elegantize.com/...)
+RewriteCond %{REQUEST_URI} https?:/ [NC]
+RewriteRule .* - [R=410,L]
+
+# ── SEO: Strip indexable query params → 301 to clean URL ────────────────────
+
+# AMP parameters (?amp=1, ?noamp=mobile)
+RewriteCond %{QUERY_STRING} (^|&)amp=1 [NC]
+RewriteRule ^(.*)$ /$1? [R=301,L]
+
+RewriteCond %{QUERY_STRING} (^|&)noamp= [NC]
+RewriteRule ^(.*)$ /$1? [R=301,L]
+
+# Divi builder parameter (?et_blog)
+RewriteCond %{QUERY_STRING} (^|&)et_blog [NC]
+RewriteRule ^(.*)$ /$1? [R=301,L]
+
+# ── SEO: Remove trailing slashes (canonical URLs) ───────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [R=301,L]
+
+# ── SEO: 301 Redirects for old WordPress duplicate/variant pages ─────────────
+
+# Category/tag archives and pagination → Blog
+RewriteRule ^category/.+$ /blog [R=301,L]
+RewriteRule ^tag/.+$ /blog [R=301,L]
+RewriteRule ^blog/page/[0-9]+/?$ /blog [R=301,L]
+
+# Old home/about/blog page variants
+RewriteRule ^home-4/?$ / [R=301,L]
+RewriteRule ^about-us/?$ /about [R=301,L]
+RewriteRule ^blog-2/?$ /blog [R=301,L]
+
+# Old top-level WordPress service slugs → canonical React service routes
+RewriteRule ^floral-design/?$ /services/floral-design [R=301,L]
+RewriteRule ^floral-design-3/?$ /services/floral-design [R=301,L]
+RewriteRule ^ceiling-design/?$ /services/ceiling-design [R=301,L]
+RewriteRule ^ceiling-design-2/?$ /services/ceiling-design [R=301,L]
+RewriteRule ^vinyl-floor-wraps/?$ /services/vinyl-floor-wrap [R=301,L]
+RewriteRule ^vinyl-floor-wraps-3/?$ /services/vinyl-floor-wrap [R=301,L]
+RewriteRule ^centerpiece-design/?$ /services/centerpiece-design [R=301,L]
+RewriteRule ^centerpiece-design-3/?$ /services/centerpiece-design [R=301,L]
+
+# ── React Router: serve index.html for all non-file routes ───────────────────
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
